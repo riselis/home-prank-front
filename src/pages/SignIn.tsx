@@ -12,6 +12,7 @@ import {
 } from '@mui/material'
 import { styled } from '@mui/material/styles'
 import { useTokens } from '../context/TokenContext'
+import { supabase } from '../lib/supabaseClient'
 
 const PageBox = styled(Box)(({ theme }) => ({
   background: 'linear-gradient(to bottom right, #F9F9FC, #FFFFFF)',
@@ -38,19 +39,19 @@ function SignIn() {
 
   const handleSignIn = async (method: 'email' | 'google' | 'apple') => {
     setIsLoading(true)
-
-    setTimeout(() => {
-      setAuthenticated(true)
-      setIsLoading(false)
-      navigate(returnTo)
-    }, 1000)
-  }
-
-  const handleEmailSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (email.trim()) {
-      handleSignIn('email')
+    if (method === 'email') {
+      const { error } = await supabase.auth.signInWithPassword({ email, password: '<ask-for-password-or-magic-link>' })
+      if (error) alert(error.message)
+      else {
+        setAuthenticated(true)
+        navigate(returnTo)
+      }
+    } else {
+      const provider = method === 'google' ? 'google' : 'apple'
+      const { error } = await supabase.auth.signInWithOAuth({ provider })
+      if (error) alert(error.message)
     }
+    setIsLoading(false)
   }
 
   return (

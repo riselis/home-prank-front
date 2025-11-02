@@ -11,6 +11,7 @@ import {
   CardContent,
 } from '@mui/material'
 import { styled } from '@mui/material/styles'
+import { GenerationStore } from '../store/generation'
 
 const PageBox = styled(Box)(({ theme }) => ({
   background: 'linear-gradient(to bottom right, #F9F9FC, #FFFFFF)',
@@ -65,6 +66,7 @@ function ChooseAction() {
 
   const handleGenerate = () => {
     if (selectedAction) {
+      GenerationStore.setAction({ id: selectedAction })
       navigate('/generate')
     }
   }

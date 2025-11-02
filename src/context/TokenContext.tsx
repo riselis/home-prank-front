@@ -8,6 +8,7 @@ interface TokenContextType {
   useToken: () => boolean
   isAuthenticated: boolean
   setAuthenticated: (value: boolean) => void
+  logout: () => Promise<void>
 }
 
 const TokenContext = createContext<TokenContextType | undefined>(undefined)
@@ -26,6 +27,12 @@ export function TokenProvider({ children }: { children: ReactNode }) {
       return true
     }
     return false
+  }
+
+  const logout = async () => {
+    await supabase.auth.signOut()
+    setTokens(0)
+    setIsAuthenticated(false)
   }
 
   useEffect(() => {
@@ -71,6 +78,7 @@ export function TokenProvider({ children }: { children: ReactNode }) {
         useToken,
         isAuthenticated,
         setAuthenticated: setIsAuthenticated,
+        logout,
       }}
     >
       {children}

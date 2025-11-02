@@ -11,6 +11,7 @@ import {
   CardMedia,
 } from '@mui/material'
 import { styled } from '@mui/material/styles'
+import { GenerationStore } from '../store/generation'
 
 const PageBox = styled(Box)(({ theme }) => ({
   background: 'linear-gradient(to bottom right, #F9F9FC, #FFFFFF)',
@@ -49,6 +50,7 @@ function UploadPhoto() {
       const reader = new FileReader()
       reader.onloadend = () => {
         setSelectedImage(reader.result as string)
+        GenerationStore.setDataUrl(reader.result as string)
         setImageSource('gallery')
       }
       reader.readAsDataURL(file)
@@ -66,6 +68,7 @@ function UploadPhoto() {
         const reader = new FileReader()
         reader.onloadend = () => {
           setSelectedImage(reader.result as string)
+          GenerationStore.setDataUrl(reader.result as string)
           setImageSource('camera')
         }
         reader.readAsDataURL(file)
@@ -76,6 +79,7 @@ function UploadPhoto() {
 
   const handleUseExample = () => {
     setSelectedImage('https://via.placeholder.com/400x600/F9F9FC/7B5CFF?text=Example+Room')
+    GenerationStore.setDataUrl('https://via.placeholder.com/400x600/F9F9FC/7B5CFF?text=Example+Room')
     setImageSource('example')
   }
 

@@ -21,6 +21,7 @@ const PageBox = styled(Box)(({ theme }) => ({
     padding: theme.spacing(4, 2),
   },
 }))
+import { GenerationStore } from '../store/generation'
 
 const CharacterCard = styled(Card)<{ selected?: boolean }>(({ theme, selected }) => ({
   cursor: 'pointer',
@@ -86,6 +87,10 @@ function ChooseCharacter() {
 
   const handleContinue = () => {
     if (selectedCharacter && (selectedCharacter !== 'custom' || customPrompt.trim())) {
+      GenerationStore.setCharacter({
+        id: selectedCharacter,
+        customPrompt: selectedCharacter === 'custom' ? customPrompt.trim() : null,
+      })
       navigate('/action')
     }
   }
