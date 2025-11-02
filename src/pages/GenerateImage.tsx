@@ -18,6 +18,8 @@ import {
 import { styled } from '@mui/material/styles'
 import TokenDisplay from '../components/TokenDisplay'
 import { useTokens } from '../context/TokenContext'
+import { generateImage } from '../api'
+import { supabase } from '../lib/supabaseClient'
 
 const PageBox = styled(Box)(({ theme }) => ({
   background: 'linear-gradient(to bottom right, #F9F9FC, #FFFFFF)',
@@ -54,19 +56,40 @@ function GenerateImage() {
   const [showSignUp, setShowSignUp] = useState(false)
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (tokens > 0 || isAuthenticated) {
-        setGeneratedImage('https://via.placeholder.com/400x600/7B5CFF/FFFFFF?text=AI+Generated+Prank+Image')
-        setIsGenerating(false)
-        if (!isAuthenticated) {
-          useToken()
+    (async () => {
+      try {
+        // 1) Proveri da li je user ulogovan; ako nije – pošalji na /signup
+        const { data } = await supabase.auth.getSession()
+        if (!data.session) {
+          setShowSignUp(true)
+          return
         }
-      } else {
-        setShowSignUp(true)
+  
+        setIsGenerating(true)
+  
+        // 2) (Opcionalno) prvo kreiraj generation zapis (RPC)
+        // const generationId = await startGeneration({
+        //   room_photo_id: '<uuid-snimljene-fotke-iz-storagea>',
+        //   character_id: '<uuid>',
+        //   action_id: '<uuid>',
+        //   custom_prompt: null,
+        //   realism_filter: false,
+        // })
+  
+        const generationId = '<existing-generation-id>' // ako trenutno nemaš RPC, prosledi neki test ID
+  
+        // 3) Pozovi Edge Function
+        const result = await generateImage(generationId)
+  
+        // 4) Prikaži rezultat
+        setGeneratedImage(result.preview_url)
+        setIsGenerating(false)
+        // Po potrebi: osveži token balance pozivom getTokenBalance() ili ćeš to raditi iz backenda
+      } catch (e) {
+        console.error(e)
+        setIsGenerating(false)
       }
-    }, 2000)
-
-    return () => clearTimeout(timer)
+    })()
   }, [])
 
   const handleRemoveWatermark = () => {

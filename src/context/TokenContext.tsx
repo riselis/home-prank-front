@@ -1,4 +1,6 @@
-import { createContext, useContext, useState, ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
+import { supabase } from '../lib/supabaseClient'
+import { getTokenBalance } from '../api'
 
 interface TokenContextType {
   tokens: number
@@ -25,6 +27,41 @@ export function TokenProvider({ children }: { children: ReactNode }) {
     }
     return false
   }
+
+  useEffect(() => {
+    // osluškuj promenu auth stanja i povuci balance
+    const { data: sub } = supabase.auth.onAuthStateChange(async (_evt, session) => {
+      if (session) {
+        try {
+          const balance = await getTokenBalance()
+
+          console.log('balance', balance)
+          setTokens(balance)
+          setIsAuthenticated(true)
+        } catch {
+          // ignoriši ili ispiši grešku
+        }
+      } else {
+        setTokens(0)
+        setIsAuthenticated(false)
+      }
+    })
+  
+    // inicijalno učitaj ako već postoji sesija
+    supabase.auth.getSession().then(async ({ data }) => {
+      if (data.session) {
+        try {
+          const balance = await getTokenBalance()
+          setTokens(balance)
+          setIsAuthenticated(true)
+        } catch {/* no-op */}
+      }
+    })
+  
+    return () => {
+      sub.subscription.unsubscribe()
+    }
+  }, [])
 
   return (
     <TokenContext.Provider

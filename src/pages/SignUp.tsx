@@ -1,17 +1,8 @@
 import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import {
-  Container,
-  Box,
-  Typography,
-  Button,
-  Card,
-  CardContent,
-  TextField,
-  Stack,
-  Divider,
-} from '@mui/material'
+import { Container, Box, Typography, Button, Card, TextField, Stack, Divider } from '@mui/material'
 import { styled } from '@mui/material/styles'
+import { supabase } from '../lib/supabaseClient'
 import { useTokens } from '../context/TokenContext'
 
 const PageBox = styled(Box)(({ theme }) => ({
@@ -28,112 +19,82 @@ const SignUpCard = styled(Card)(({ theme }) => ({
   padding: theme.spacing(4),
 }))
 
-function SignUp() {
+export default function SignUp() {
   const navigate = useNavigate()
   const location = useLocation()
   const { addTokens, setAuthenticated } = useTokens()
   const [email, setEmail] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
-
+  const [password, setPassword] = useState('')
+  const [loading, setLoading] = useState(false)
   const returnTo = (location.state as { returnTo?: string })?.returnTo || '/'
 
   const handleSignUp = async (method: 'email' | 'google' | 'apple') => {
-    setIsLoading(true)
-
-    setTimeout(() => {
-      setAuthenticated(true)
-      addTokens(1)
-      setIsLoading(false)
-      navigate(returnTo)
-    }, 1000)
-  }
-
-  const handleEmailSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (email.trim()) {
-      handleSignUp('email')
+    setLoading(true)
+    if (method === 'email') {
+      const { error } = await supabase.auth.signUp({ email, password })
+      if (error) alert(error.message)
+      else {
+        addTokens(1)
+        setAuthenticated(true)
+        navigate(returnTo)
+      }
+    } else {
+      const provider = method === 'google' ? 'google' : 'apple'
+      const { error } = await supabase.auth.signInWithOAuth({ provider })
+      if (error) alert(error.message)
     }
+    setLoading(false)
   }
 
   return (
     <PageBox>
       <Container maxWidth="sm">
         <SignUpCard>
-          <Box sx={{ textAlign: 'center', mb: 4 }}>
-            <Typography variant="h1" gutterBottom>
-              Create Account
-            </Typography>
-            <Typography variant="subtitle1" color="text.secondary">
-              Sign up and get <strong>1 FREE Token</strong> to start pranking!
-            </Typography>
-          </Box>
+          <Typography variant="h1" textAlign="center" gutterBottom>
+            Create Account
+          </Typography>
+          <Typography variant="subtitle1" color="text.secondary" textAlign="center" gutterBottom>
+            Get <strong>1 free token</strong> for signing up!
+          </Typography>
 
-          <form onSubmit={handleEmailSubmit}>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              handleSignUp('email')
+            }}
+          >
             <TextField
               fullWidth
               type="email"
-              label="Enter your email"
+              label="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              required
               sx={{ mb: 2 }}
-              disabled={isLoading}
             />
-            <Button
-              type="submit"
-              variant="contained"
+            <TextField
               fullWidth
-              disabled={isLoading || !email.trim()}
+              type="password"
+              label="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               sx={{ mb: 3 }}
-            >
-              {isLoading ? 'Signing up...' : 'Sign Up with Email'}
+            />
+            <Button variant="contained" fullWidth type="submit" disabled={loading}>
+              {loading ? 'Signing up...' : 'Sign Up'}
             </Button>
           </form>
 
-          <Divider sx={{ my: 3 }}>
-            <Typography variant="body2" color="text.secondary">
-              or
-            </Typography>
-          </Divider>
-
+          <Divider sx={{ my: 3 }}>or</Divider>
           <Stack spacing={2}>
-            <Button
-              variant="outlined"
-              fullWidth
-              onClick={() => handleSignUp('google')}
-              disabled={isLoading}
-              startIcon={<span style={{ fontSize: 20 }}>🔍</span>}
-            >
+            <Button variant="outlined" onClick={() => handleSignUp('google')}>
               Continue with Google
             </Button>
-            <Button
-              variant="outlined"
-              fullWidth
-              onClick={() => handleSignUp('apple')}
-              disabled={isLoading}
-              startIcon={<span style={{ fontSize: 20 }}>🍎</span>}
-            >
+            <Button variant="outlined" onClick={() => handleSignUp('apple')}>
               Continue with Apple
             </Button>
           </Stack>
-
-          <Box sx={{ textAlign: 'center', mt: 3 }}>
-            <Typography variant="body2" color="text.secondary">
-              Already have an account?{' '}
-              <Button
-                variant="text"
-                onClick={() => navigate('/signin')}
-                sx={{ textTransform: 'none', textDecoration: 'underline' }}
-              >
-                Sign In
-              </Button>
-            </Typography>
-          </Box>
         </SignUpCard>
       </Container>
     </PageBox>
   )
 }
-
-export default SignUp
-
