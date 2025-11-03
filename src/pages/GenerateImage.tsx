@@ -12,7 +12,7 @@ import {
   uploadRoomPhotoFromDataUrl,
   insertRoomPhotoRow,
   startGeneration,
-  callGenerateImage,
+  generateImage,
 } from '../api'
 import { GenerationStore } from '../store/generation'
 
@@ -51,15 +51,18 @@ export default function GenerateImage() {
   useEffect(() => {
     (async () => {
       try {
+        // 0) auth
         const { data: { session } } = await supabase.auth.getSession()
         if (!session) {
           navigate('/signup', { state: { returnTo: '/generate' } })
           return
         }
 
+        // 1) input iz store-a
         const dataUrl = GenerationStore.getDataUrl()
         const character = GenerationStore.getCharacter()
         const action = GenerationStore.getAction()
+
         if (!dataUrl || !character || !action) {
           setErrorMsg('Missing input (photo/character/action). Please start again.')
           setIsGenerating(false)
@@ -68,33 +71,41 @@ export default function GenerateImage() {
 
         setIsGenerating(true)
 
-        // 1) Upload u storage
+        // 2) upload fotke (podržava i data URL i https URL)
         const storagePath = await uploadRoomPhotoFromDataUrl(dataUrl)
 
-        // 2) Insert u room_photos
+        // 3) insert u room_photos (room_id trenutno null)
         const roomPhotoId = await insertRoomPhotoRow(storagePath, null)
 
-        // 3) RPC start_generation (ovde šaljemo SLUG-ove; prilagodi ako koristiš UUID-ove)
+        // 4) RPC start_generation (slug-ovi iz Character/Action)
         const genId = await startGeneration({
           room_photo_id: roomPhotoId,
-          character_slug: character.id,
+          character_slug: character.id,   // očekuješ slug; ako su ti UUID-ovi, prilagodi RPC
           action_slug: action.id,
           custom_prompt: character.customPrompt ?? null,
           realism_filter: false,
         })
 
-        // 4) Edge funkcija generate-image
-        const result = await callGenerateImage(genId)
+        // 5) Edge funkcija generate-image (vrati preview_url)
+        const result = await generateImage(genId)
 
-        // 5) Prikaži
         setGeneratedImage(result.preview_url ?? null)
         setIsGenerating(false)
 
-        // Očisti store (opciono)
+        // 6) očisti store
         GenerationStore.reset()
       } catch (e: any) {
         console.error(e)
-        setErrorMsg(e?.message || 'Failed to generate image')
+        // Ručnije hvatanje tipičnih slučajeva da lakše debuguješ
+        if (String(e?.message || e).includes('Generation not found')) {
+          setErrorMsg('Generation not found. Proveri da li je start_generation RPC deployovan i da li vraća ID.')
+        } else if (String(e?.message || e).includes('row-level security')) {
+          setErrorMsg('RLS blokira upis/čitanje. Proveri RLS politike za room_photos i generations.')
+        } else if (String(e?.message || e).includes('storage')) {
+          setErrorMsg('Problem sa uploadom u storage (bucket/permisiije).')
+        } else {
+          setErrorMsg(e?.message || 'Failed to generate image')
+        }
         setIsGenerating(false)
       }
     })()

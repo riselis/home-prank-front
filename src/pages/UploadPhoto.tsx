@@ -49,8 +49,9 @@ function UploadPhoto() {
     if (file) {
       const reader = new FileReader()
       reader.onloadend = () => {
-        setSelectedImage(reader.result as string)
-        GenerationStore.setDataUrl(reader.result as string)
+        const asDataUrl = reader.result as string
+        setSelectedImage(asDataUrl)
+        GenerationStore.setDataUrl(asDataUrl)
         setImageSource('gallery')
       }
       reader.readAsDataURL(file)
@@ -67,8 +68,9 @@ function UploadPhoto() {
       if (file) {
         const reader = new FileReader()
         reader.onloadend = () => {
-          setSelectedImage(reader.result as string)
-          GenerationStore.setDataUrl(reader.result as string)
+          const asDataUrl = reader.result as string
+          setSelectedImage(asDataUrl)
+          GenerationStore.setDataUrl(asDataUrl)
           setImageSource('camera')
         }
         reader.readAsDataURL(file)
@@ -78,8 +80,10 @@ function UploadPhoto() {
   }
 
   const handleUseExample = () => {
-    setSelectedImage('https://via.placeholder.com/400x600/F9F9FC/7B5CFF?text=Example+Room')
-    GenerationStore.setDataUrl('https://via.placeholder.com/400x600/F9F9FC/7B5CFF?text=Example+Room')
+    const example = 'https://via.placeholder.com/400x600/F9F9FC/7B5CFF?text=Example+Room'
+    setSelectedImage(example)
+    // uploadRoomPhotoFromDataUrl će sam fetchovati i uploadovati i kada je http(s) URL
+    GenerationStore.setDataUrl(example)
     setImageSource('example')
   }
 
@@ -208,4 +212,3 @@ function UploadPhoto() {
 }
 
 export default UploadPhoto
-

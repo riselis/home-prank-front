@@ -53,16 +53,15 @@ export async function insertRoomPhotoRow(src_storage_path: string, room_id: stri
 /** 3) start_generation RPC — pravi red u public.generations i troši token */
 export async function startGeneration(args: {
   room_photo_id: string
-  character_slug?: string | null
-  action_slug?: string | null
+  character_slug: string
+  action_slug: string
   custom_prompt?: string | null
   realism_filter?: boolean
 }) {
-  // Ako tvoj RPC očekuje UUID-ove za character/action — prilagodi! Ovde pretpostavljamo slug lookups u samom RPC-u.
   const { data, error } = await supabase.rpc('start_generation', {
     _room_photo_id: args.room_photo_id,
-    _character_slug: args.character_slug ?? null,
-    _action_slug: args.action_slug ?? null,
+    _character_slug: args.character_slug,
+    _action_slug: args.action_slug,
     _custom_prompt: args.custom_prompt ?? null,
     _realism_filter: args.realism_filter ?? false,
   })
@@ -71,23 +70,25 @@ export async function startGeneration(args: {
 }
 
 /** 4) Edge funkcija /generate-image sa JWT */
-export async function callGenerateImage(generation_id: string) {
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session?.access_token) throw new Error('Not authenticated')
+export async function generateImage(genId: string) {
+  const { data: sessionRes } = await supabase.auth.getSession()
+  const accessToken = sessionRes.session?.access_token
+  if (!accessToken) throw new Error('Not authenticated')
 
-  const base = import.meta.env.VITE_FUNCTIONS_URL
-  if (!base) throw new Error('VITE_FUNCTIONS_URL not set')
+  const { VITE_FUNCTIONS_URL, VITE_PROJECT_ANON_KEY } = import.meta.env
+  if (!VITE_FUNCTIONS_URL) throw new Error('VITE_FUNCTIONS_URL is not defined')
 
-  const res = await fetch(`${base}/generate-image`, {
+  const res = await fetch(`${VITE_FUNCTIONS_URL}/generate-image`, {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${session.access_token}`,
+      Authorization: `Bearer ${accessToken}`,
       'Content-Type': 'application/json',
+      // 👇 important when calling functions directly via fetch
+      apikey: VITE_PROJECT_ANON_KEY,
     },
-    body: JSON.stringify({ generation_id }),
+    body: JSON.stringify({ generation_id: genId }),
   })
 
-  const text = await res.text()
-  if (!res.ok) throw new Error(text || 'Generation failed')
-  try { return JSON.parse(text) } catch { return { ok: true, raw: text } }
+  if (!res.ok) throw new Error(await res.text().catch(() => 'Generation failed'))
+  return res.json() as Promise<{ ok: boolean; generation_id: string; preview_url: string | null }>
 }
