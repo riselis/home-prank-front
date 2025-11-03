@@ -31,44 +31,64 @@ export function TokenProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     await supabase.auth.signOut()
+    // Supabase automatski briše sesiju iz localStorage, ali osiguramo da se obriše i ručno
     setTokens(0)
     setIsAuthenticated(false)
   }
 
   useEffect(() => {
-    // osluškuj promenu auth stanja i povuci balance
-    const { data: sub } = supabase.auth.onAuthStateChange(async (_evt, session) => {
+    let mounted = true
+    setIsAuthenticated(false)
+  
+    const initAuth = async () => {
+      // 1️⃣ Sačekaj da se Supabase rehidrira (asinhrono čitanje localStorage)
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+  
+      if (!mounted) return
+  
       if (session) {
         try {
           const balance = await getTokenBalance()
-
-          console.log('balance', balance)
           setTokens(balance)
           setIsAuthenticated(true)
-        } catch {
-          // ignoriši ili ispiši grešku
+        } catch (err) {
+          console.error('Error fetching token balance:', err)
+          setIsAuthenticated(true)
         }
-      } else {
-        setTokens(0)
-        setIsAuthenticated(false)
       }
-    })
   
-    // inicijalno učitaj ako već postoji sesija
-    supabase.auth.getSession().then(async ({ data }) => {
-      if (data.session) {
-        try {
-          const balance = await getTokenBalance()
-          setTokens(balance)
-          setIsAuthenticated(true)
-        } catch {/* no-op */}
+      // 2️⃣ Slušaj dalju promenu stanja (npr. auto-refresh tokena, logout, login)
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange(async (event, session) => {
+        if (!mounted) return
+  
+        if (session && event === 'SIGNED_IN') {
+          try {
+            const balance = await getTokenBalance()
+            setTokens(balance)
+            setIsAuthenticated(true)
+          } catch (err) {
+            console.error('Error fetching token balance:', err)
+            setIsAuthenticated(true)
+          }
+        } else if (event === 'SIGNED_OUT') {
+          setTokens(0)
+          setIsAuthenticated(false)
+        }
+      })
+  
+      return () => {
+        mounted = false
+        subscription.unsubscribe()
       }
-    })
+    }
   
-    return () => {
-      sub.subscription.unsubscribe()
-    }
-  }, [])
+    initAuth()
+  }, [])
+  
 
   return (
     <TokenContext.Provider

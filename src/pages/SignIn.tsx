@@ -37,6 +37,11 @@ function SignIn() {
 
   const returnTo = (location.state as { returnTo?: string })?.returnTo || '/'
 
+  const handleEmailSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    await handleSignIn('email')
+  }
+
   const handleSignIn = async (method: 'email' | 'google' | 'apple') => {
     setIsLoading(true)
     if (method === 'email') {

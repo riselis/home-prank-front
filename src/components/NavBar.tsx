@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom'
-import { AppBar, Toolbar, Button, Box, Typography } from '@mui/material'
+import { AppBar, Toolbar, Button, Box } from '@mui/material'
 import { styled } from '@mui/material/styles'
 import { useTokens } from '../context/TokenContext'
 import TokenDisplay from './TokenDisplay'
@@ -39,7 +39,9 @@ const LogoButton = styled(Button)(({ theme }) => ({
   },
 }))
 
-const NavLink = styled(Button)<{ active?: boolean }>(({ theme, active }) => ({
+const NavLink = styled(Button, {
+  shouldForwardProp: (prop) => prop !== 'active',
+})<{ active?: boolean }>(({ theme, active }) => ({
   textTransform: 'none',
   color: active ? theme.palette.primary.main : theme.palette.text.primary,
   fontWeight: active ? 600 : 400,
@@ -48,6 +50,7 @@ const NavLink = styled(Button)<{ active?: boolean }>(({ theme, active }) => ({
     color: theme.palette.primary.main,
   },
 }))
+
 
 export default function NavBar() {
   const navigate = useNavigate()
